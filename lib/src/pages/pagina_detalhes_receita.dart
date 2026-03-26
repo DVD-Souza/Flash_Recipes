@@ -65,6 +65,7 @@ class _PaginaDetalhesReceitaState extends State<PaginaDetalhesReceita> {
                 child: Container(
                   padding: const EdgeInsets.all(22),
                   decoration: const BoxDecoration(
+                    color: Colors.white,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(30),
                     ),
