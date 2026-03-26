@@ -32,7 +32,7 @@ Para executar a aplicação:
 
 1. Clone ou baixe o repositório, navegue até a pasta raiz e execute o comando run:  
    ```bash
-   [git clone https://github.com/DVD-Souza/FlashRecipes.git](https://github.com/DVD-Souza/Flash_Recipes.git)
+   git clone https://github.com/DVD-Souza/Flash_Recipes.git
    cd flash_receitas
    flutter run
    ```
