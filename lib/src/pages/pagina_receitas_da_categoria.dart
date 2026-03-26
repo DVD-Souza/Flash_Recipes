@@ -1,0 +1,193 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+
+import '../models/receita.dart';
+import '../controllers/receitas_controlador.dart';
+import 'pagina_detalhes_receita.dart';
+
+class PaginaReceitasDaCategoria extends StatefulWidget {
+  final String categoriaNome;
+
+  const PaginaReceitasDaCategoria({
+    super.key,
+    required this.categoriaNome,
+  });
+
+  @override
+  State<PaginaReceitasDaCategoria> createState() =>
+      _PaginaReceitasDaCategoriaState();
+}
+
+class _PaginaReceitasDaCategoriaState
+    extends State<PaginaReceitasDaCategoria> {
+  bool carregando = true;
+  List receitasApi = [];
+
+  String nomeCategoriaExibicao = '';
+
+  @override
+  void initState() {
+    super.initState();
+    carregarReceitas();
+    traduzirCategoria();
+  }
+
+  // TRADUÇÃO DO NOME DA CATEGORIA
+  Future<void> traduzirCategoria() async {
+    final controlador = context.read<ReceitasControlador>();
+    final categoriaPt =
+        await controlador.traduzirTextoSimples(widget.categoriaNome);
+
+    if (!context.mounted) return;
+    setState(() => nomeCategoriaExibicao = categoriaPt);
+  }
+
+  // CARGA DAS RECEITAS DA API
+  Future<void> carregarReceitas() async {
+    final url = Uri.parse(
+      'https://www.themealdb.com/api/json/v1/1/filter.php?c=${widget.categoriaNome}',
+    );
+
+    final resp = await http.get(url);
+    if (resp.statusCode == 200) {
+      final json = jsonDecode(resp.body);
+      receitasApi = json['meals'];
+    }
+
+    final controlador = context.read<ReceitasControlador>();
+    for (final item in receitasApi) {
+      controlador.traduzirSeNecessario(converter(item));
+    }
+
+    setState(() => carregando = false);
+  }
+
+  // CONVERSÃO API → MODEL
+  Receita converter(Map item) {
+    return Receita(
+      id: item['idMeal'],
+      nome: item['strMeal'],
+      categoria: widget.categoriaNome,
+      instrucoes: 'Clique para ver o modo de preparo.',
+      miniatura: item['strMealThumb'],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controlador = context.watch<ReceitasControlador>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          nomeCategoriaExibicao.isNotEmpty
+              ? nomeCategoriaExibicao
+              : widget.categoriaNome,
+        ),
+      ),
+      body: carregando
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: receitasApi.length,
+              itemBuilder: (_, index) {
+                final receita = converter(receitasApi[index]);
+
+                final traducao = controlador.getTraducao(receita.id);
+                final nomeExibicao =
+                    traducao?.nomePt ?? receita.nome;
+
+                return _CardReceita(
+                  receita: receita,
+                  nomeExibicao: nomeExibicao,
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _CardReceita extends StatelessWidget {
+  final Receita receita;
+  final String nomeExibicao;
+
+  const _CardReceita({
+    required this.receita,
+    required this.nomeExibicao,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final controlador = context.read<ReceitasControlador>();
+        final receitaCompleta =
+            await controlador.buscarReceitaPorId(receita.id);
+
+        if (!context.mounted) return;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                PaginaDetalhesReceita(receita: receitaCompleta),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+
+            // IMAGEM
+            Hero(
+              tag: receita.id,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(20),
+                ),
+                child: Image.network(
+                  receita.miniatura,
+                  width: 120,
+                  height: 110,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // TEXTO
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  nomeExibicao,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
