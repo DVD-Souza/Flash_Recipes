@@ -9,6 +9,7 @@ Ela visa facilitar o acesso, organização e planejamento de receitas para pesso
 - Deivid Souza dos Santos Oliveira
 - Ismael Rodrigues de Oliveira Neto
 - João Vitor da Conceição de Almeida
+- Valnei Sousa Conceição Filho
 
 ## Problema Alvo
 
